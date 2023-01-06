@@ -7,13 +7,18 @@ import (
 type config struct {
 	Token    string        `fig:"token" validate:"required"`
 	Timeout  time.Duration `fig:"timeout" default:"60s"`
-	DoIPv4   bool          `fig:"do-ipv4"`
-	DoIPv6   bool          `fig:"do-ipv6"`
 	LogLevel string        `fig:"loglevel" default:"error"`
 	Domains  map[string]struct {
 		V4Records map[string]interface{} `fig:"v4-records"`
-		V6Records map[string]interface{} `fig:"v6-records"`
 	} `fig:"zones" validate:"required"`
+	Endpoint string `fig:"endpoint" validate:"required"`
+	DDDomain string `fig:"dd_domain" validate:"required"`
+	DDToken  string `fig:"dd_token" validate:"required"`
+}
+
+// StationJSON is the dumb structure used to unmarshall the request from the router
+type StationJSON struct {
+	WanIP4Addr string `json:"wan_ip4_addr"`
 }
 
 type apiZones struct {

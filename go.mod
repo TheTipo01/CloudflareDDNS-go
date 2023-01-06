@@ -1,4 +1,4 @@
-module CloudflareDDNS-go
+module github.com/TheTipo01/CloudflareDDNS-go
 
 go 1.17
 
@@ -8,7 +8,7 @@ require (
 )
 
 require (
-	github.com/mitchellh/mapstructure v1.4.1 // indirect
-	github.com/pelletier/go-toml v1.9.3 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
+	github.com/pelletier/go-toml v1.9.5 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
