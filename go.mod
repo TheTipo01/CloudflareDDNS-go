@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/bwmarrin/lit v0.0.0-20190813132558-fd4b44871312
+	github.com/goccy/go-json v0.10.0
 	github.com/kkyr/fig v0.3.0
 )
 

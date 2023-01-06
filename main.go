@@ -1,8 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"github.com/bwmarrin/lit"
+	"github.com/goccy/go-json"
 	"github.com/kkyr/fig"
 	"net/http"
 	"strings"
@@ -65,7 +65,7 @@ func main() {
 	for {
 		newIP = getIP()
 
-		if newIP != ip {
+		if newIP != ip && newIP != "" {
 			lit.Info("IP changed from " + ip + " to " + newIP)
 
 			wg.Add(2)
@@ -114,7 +114,7 @@ func getRecords() {
 				i, zone := i, zone
 				go func() {
 					defer wg.Done()
-					request, err := http.NewRequest("GET", strings.Join([]string{baseAPIUrl, zone.ID, "/dns_records/"}, ""), nil)
+					request, err := http.NewRequest("GET", baseAPIUrl+zone.ID+"/dns_records/", nil)
 					request.Header.Add("authorization", "Bearer "+cfg.Token)
 
 					response, err := http.DefaultClient.Do(request)

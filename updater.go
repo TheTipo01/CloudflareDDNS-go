@@ -1,8 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"github.com/bwmarrin/lit"
+	"github.com/goccy/go-json"
 	"net/http"
 	"strings"
 )
@@ -33,7 +33,7 @@ func updateCloudflare(ip string) {
 }
 
 func patchRecord(zone zoneAndRecords, record dnsRecord, ip string) {
-	request, err := http.NewRequest("PATCH", strings.Join([]string{baseAPIUrl, zone.ZoneID, "/dns_records/", record.ID}, ""),
+	request, err := http.NewRequest("PATCH", baseAPIUrl+zone.ZoneID+"/dns_records/"+record.ID,
 		strings.NewReader("{\"content\":\""+ip+"\"}"))
 	request.Header.Add("authorization", "Bearer "+cfg.Token)
 	request.Header.Add("content-type", "application/json")

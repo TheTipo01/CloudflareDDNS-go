@@ -1,25 +1,30 @@
 package main
 
 import (
-	"encoding/json"
 	"github.com/bwmarrin/lit"
+	"github.com/goccy/go-json"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 )
 
-func getIP() string {
-	var (
-		out      StationJSON
-		replacer = strings.NewReplacer("[", "{", "]", "}", "{", "", "}", "")
-	)
+var (
+	replacer *strings.Replacer
+	req      *http.Request
+)
 
-	client := &http.Client{}
-	req, _ := http.NewRequest("GET", cfg.Endpoint, nil)
+func init() {
+	replacer = strings.NewReplacer("[", "{", "]", "}", "{", "", "}", "")
+	req, _ = http.NewRequest("GET", cfg.Endpoint, nil)
 	// Add Accept-Language header, otherwise the modem will throw bad requests at us
 	req.Header.Set("Accept-Language", "it-IT")
-	resp, err := client.Do(req)
+}
+
+func getIP() string {
+	var out StationJSON
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		lit.Error("Error while requesting ip: " + err.Error())
 		return ""
