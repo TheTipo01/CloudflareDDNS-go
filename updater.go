@@ -1,38 +1,36 @@
 package main
 
 import (
-	"github.com/bwmarrin/lit"
+	"errors"
 	"github.com/goccy/go-json"
 	"net/http"
 	"strings"
 )
 
 // Updates DuckDNS
-func updateDuckDNS(ip string) {
+func updateDuckDNS(ip string) error {
 	_, err := http.Get("https://www.duckdns.org/update?domains=" + cfg.DDDomain + "&token=" + cfg.DDToken + "&ip=" + ip)
 	if err != nil {
-		lit.Error("Error while updating DuckDNS: " + err.Error())
-		errorFlag = true
+		return errors.New("error while updating DuckDNS: " + err.Error())
 	}
 
-	wg.Done()
+	return nil
 }
 
-func updateCloudflare(ip string) {
+func updateCloudflare(ip string) error {
+	var err error
 	for _, zone := range records {
-		zone := zone
 		for _, record := range zone.Records {
-			record := record
 			if record.Type == "A" {
-				wg.Add(1)
-				go patchRecord(zone, record, ip)
+				err = patchRecord(zone, record, ip)
 			}
 		}
 	}
-	wg.Done()
+
+	return err
 }
 
-func patchRecord(zone zoneAndRecords, record dnsRecord, ip string) {
+func patchRecord(zone zoneAndRecords, record dnsRecord, ip string) error {
 	request, err := http.NewRequest("PATCH", baseAPIUrl+zone.ZoneID+"/dns_records/"+record.ID,
 		strings.NewReader("{\"content\":\""+ip+"\"}"))
 	request.Header.Add("authorization", "Bearer "+cfg.Token)
@@ -40,16 +38,14 @@ func patchRecord(zone zoneAndRecords, record dnsRecord, ip string) {
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		lit.Error("%s", err)
-		errorFlag = true
-		return
+		return errors.New("error while updating Cloudflare: " + err.Error())
 	}
 
 	var apiResponse apiFeedback
 	_ = json.NewDecoder(response.Body).Decode(&apiResponse)
 	if !apiResponse.Success {
-		lit.Error("\n%s", apiResponse.Errors)
+		return errors.New("error while updating Cloudflare: " + apiResponse.Errors[0].Message)
 	}
 
-	wg.Done()
+	return nil
 }

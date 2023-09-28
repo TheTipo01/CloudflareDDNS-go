@@ -1,22 +1,20 @@
 package main
 
 import (
+	"errors"
 	"github.com/bwmarrin/lit"
 	"github.com/goccy/go-json"
 	"github.com/kkyr/fig"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 )
 
 const baseAPIUrl = "https://api.cloudflare.com/client/v4/zones/"
 
 var (
-	records   []zoneAndRecords
-	cfg       config
-	errorFlag bool
-	wg        sync.WaitGroup
+	records []zoneAndRecords
+	cfg     config
 )
 
 func init() {
@@ -44,8 +42,8 @@ func init() {
 	}
 
 	for {
-		getRecords()
-		if errorFlag {
+		err = getRecords()
+		if err != nil {
 			lit.Info("Error getting records, retrying in 3 seconds")
 			time.Sleep(3 * time.Second)
 		} else {
@@ -68,17 +66,10 @@ func main() {
 		if newIP != ip && newIP != "" {
 			lit.Info("IP changed from " + ip + " to " + newIP)
 
-			wg.Add(2)
-			go updateDuckDNS(newIP)
-			go updateCloudflare(newIP)
-			wg.Wait()
-
 			// If we don't get any errors, we save the new ip
-			if !errorFlag {
+			if updateDuckDNS(newIP) == nil && updateCloudflare(newIP) == nil {
 				ip = newIP
 				writeIP(newIP)
-			} else {
-				errorFlag = false
 			}
 		}
 
@@ -86,62 +77,50 @@ func main() {
 	}
 }
 
-// return A and AAAA records hosted on cloudflare
-func getRecords() {
+// return A records hosted on cloudflare
+func getRecords() error {
 	request, err := http.NewRequest("GET", baseAPIUrl, nil)
 	request.Header.Add("authorization", "Bearer "+cfg.Token)
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		lit.Error("%s", err)
-		errorFlag = true
-		return
+		return errors.New("error while getting records: " + err.Error())
 	}
 
 	var zones apiZones
 	_ = json.NewDecoder(response.Body).Decode(&zones)
 	if zones.Success {
-		wg := sync.WaitGroup{}
-		defer wg.Wait()
 		for i, zone := range zones.Result {
 			if allowedRecords, ok := cfg.Domains[zone.Name]; ok {
-				wg.Add(1)
 				records = append(records, zoneAndRecords{
 					ZoneID:  zone.ID,
 					Records: nil,
 				})
-				v4mutex := sync.Mutex{}
-				i, zone := i, zone
-				go func() {
-					defer wg.Done()
-					request, err := http.NewRequest("GET", baseAPIUrl+zone.ID+"/dns_records/", nil)
-					request.Header.Add("authorization", "Bearer "+cfg.Token)
 
-					response, err := http.DefaultClient.Do(request)
-					if err != nil {
-						lit.Error("%s", err)
-						errorFlag = true
-						return
-					}
+				request, err = http.NewRequest("GET", baseAPIUrl+zone.ID+"/dns_records/", nil)
+				request.Header.Add("authorization", "Bearer "+cfg.Token)
 
-					var apiResponse apiRecords
-					_ = json.NewDecoder(response.Body).Decode(&apiResponse)
+				response, err = http.DefaultClient.Do(request)
+				if err != nil {
+					return errors.New("error while getting records: " + err.Error())
+				}
 
-					if apiResponse.Success {
-						for _, record := range apiResponse.Result {
-							if record.Type == "A" {
-								if _, ok := allowedRecords.V4Records[record.Name]; ok {
-									v4mutex.Lock()
-									records[i].Records = append(records[i].Records, record)
-									v4mutex.Unlock()
-								}
+				var apiResponse apiRecords
+				_ = json.NewDecoder(response.Body).Decode(&apiResponse)
+
+				if apiResponse.Success {
+					for _, record := range apiResponse.Result {
+						if record.Type == "A" {
+							if _, ok := allowedRecords.V4Records[record.Name]; ok {
+								records[i].Records = append(records[i].Records, record)
 							}
 						}
 					}
-				}()
+				}
+
 			}
 		}
 	}
 
-	errorFlag = false
+	return nil
 }
