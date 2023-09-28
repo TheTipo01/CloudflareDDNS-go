@@ -53,10 +53,7 @@ func init() {
 }
 
 func main() {
-	var (
-		ip    string
-		newIP string
-	)
+	var ip, newIP string
 
 	ip = readIP()
 
@@ -79,7 +76,7 @@ func main() {
 
 // return A records hosted on cloudflare
 func getRecords() error {
-	request, err := http.NewRequest("GET", baseAPIUrl, nil)
+	request, _ := http.NewRequest("GET", baseAPIUrl, nil)
 	request.Header.Add("authorization", "Bearer "+cfg.Token)
 
 	response, err := http.DefaultClient.Do(request)

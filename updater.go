@@ -31,7 +31,7 @@ func updateCloudflare(ip string) error {
 }
 
 func patchRecord(zone zoneAndRecords, record dnsRecord, ip string) error {
-	request, err := http.NewRequest("PATCH", baseAPIUrl+zone.ZoneID+"/dns_records/"+record.ID,
+	request, _ := http.NewRequest("PATCH", baseAPIUrl+zone.ZoneID+"/dns_records/"+record.ID,
 		strings.NewReader("{\"content\":\""+ip+"\"}"))
 	request.Header.Add("authorization", "Bearer "+cfg.Token)
 	request.Header.Add("content-type", "application/json")
